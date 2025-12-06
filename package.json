@@ -1,0 +1,95 @@
+{
+  "name": "@n24q02m/better-notion-mcp",
+  "keywords": [
+    "notion",
+    "api",
+    "mcp",
+    "server",
+    "ai-agent",
+    "composite-tools"
+  ],
+  "version": "1.0.9",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "build": "tsc -build && node scripts/build-cli.js",
+    "dev": "tsx watch scripts/start-server.ts",
+    "test": "vitest",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit",
+    "check": "pnpm type-check && pnpm lint && pnpm format:check",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish",
+    "prepare": "simple-git-hooks",
+    "prepublishOnly": "pnpm build",
+    "docker:build": "docker build -t n24q02m/better-notion-mcp:latest .",
+    "docker:push": "docker push n24q02m/better-notion-mcp:latest",
+    "docker:run": "docker run --rm -i -e NOTION_TOKEN n24q02m/better-notion-mcp:latest"
+  },
+  "bin": {
+    "better-notion-mcp": "bin/cli.mjs"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged",
+    "commit-msg": "pnpm commitlint --edit $1"
+  },
+  "lint-staged": {
+    "src/**/*.ts": [
+      "prettier --write",
+      "eslint --fix"
+    ]
+  },
+  "files": [
+    "build/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.21.1",
+    "@notionhq/client": "^5.3.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.12",
+    "@commitlint/cli": "^19.6.2",
+    "@commitlint/config-conventional": "^19.6.2",
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^24.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.19.1",
+    "@typescript-eslint/parser": "^8.19.1",
+    "@vitest/coverage-v8": "^4.0.8",
+    "esbuild": "^0.25.12",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.1",
+    "lint-staged": "^15.3.1",
+    "prettier": "^3.4.2",
+    "simple-git-hooks": "^2.12.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.8"
+  },
+  "description": "Better MCP server for Notion API with composite tools optimized for AI agents",
+  "main": "build/src/init-server.js",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:n24q02m/better-notion-mcp.git"
+  },
+  "author": "n24q02m",
+  "bugs": {
+    "url": "https://github.com/n24q02m/better-notion-mcp/issues"
+  },
+  "homepage": "https://github.com/n24q02m/better-notion-mcp#readme"
+}

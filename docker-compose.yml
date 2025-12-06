@@ -1,0 +1,6 @@
+services:
+  better-notion-mcp:
+    build: .
+    stdin_open: true
+    tty: true
+    restart: unless-stopped

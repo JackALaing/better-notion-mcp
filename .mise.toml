@@ -1,0 +1,102 @@
+# mise configuration for better-notion-mcp
+# https://mise.jdx.dev/
+
+[tools]
+node = "22"
+pnpm = "latest"
+
+[settings]
+# Trust this directory for mise
+trusted_config_paths = ["."]
+
+[env]
+# Node environment
+NODE_ENV = "development"
+
+# ========================================
+# Development Tasks
+# ========================================
+
+[tasks.dev]
+description = "Run development server with auto-reload"
+run = "pnpm dev"
+
+[tasks.build]
+description = "Build project for production"
+run = "pnpm build"
+
+[tasks.test]
+description = "Run tests"
+run = "pnpm test"
+
+[tasks."test:watch"]
+description = "Run tests in watch mode"
+run = "pnpm test:watch"
+
+[tasks."test:coverage"]
+description = "Run tests with coverage"
+run = "pnpm test:coverage"
+
+# ========================================
+# Code Quality Tasks
+# ========================================
+
+[tasks.lint]
+description = "Lint code with ESLint"
+run = "pnpm lint"
+
+[tasks."lint:fix"]
+description = "Fix linting issues automatically"
+run = "pnpm lint:fix"
+
+[tasks.format]
+description = "Format code with Prettier"
+run = "pnpm format"
+
+[tasks."format:check"]
+description = "Check code formatting"
+run = "pnpm format:check"
+
+[tasks."type-check"]
+description = "Run TypeScript type checking"
+run = "pnpm type-check"
+
+[tasks.check]
+description = "Run all checks (type-check, lint, format)"
+run = "pnpm check"
+
+# ========================================
+# Docker Tasks
+# ========================================
+
+[tasks."docker:build"]
+description = "Build Docker image"
+run = "pnpm docker:build"
+
+[tasks."docker:run"]
+description = "Run Docker container"
+run = "pnpm docker:run"
+
+[tasks."docker:push"]
+description = "Push Docker image to registry"
+run = "pnpm docker:push"
+
+# ========================================
+# Versioning & Publishing Tasks
+# ========================================
+
+[tasks.changeset]
+description = "Create a new changeset"
+run = "pnpm changeset"
+
+[tasks."changeset:version"]
+description = "Update versions and changelogs"
+run = "pnpm changeset version"
+
+[tasks."changeset:publish"]
+description = "Publish packages to npm"
+run = "pnpm changeset publish"
+
+[tasks.release]
+description = "Build and publish to npm"
+run = "pnpm build && pnpm changeset publish"
