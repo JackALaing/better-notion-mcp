@@ -35,13 +35,13 @@ pnpm install
 4. **Build the project**
 
 ```bash
-mise run build
+pnpm build
 ```
 
 5. **Run tests**
 
 ```bash
-mise run test
+pnpm test
 ```
 
 ## Development Workflow
@@ -53,20 +53,19 @@ mise run test
 export NOTION_TOKEN=secret_xxx
 
 # Start development server with auto-reload
-mise run dev
+pnpm dev
 ```
 
 ### Making Changes
 
 1. Create a new branch: `git checkout -b feature/your-feature-name`
 2. Make your changes
-3. Run checks: `mise run check`
-4. Run tests: `mise run test`
-5. Build the project: `mise run build`
-6. **Create a changeset**: `mise run changeset`
-7. Commit your changes (see [Commit Convention](#commit-convention))
-8. Push to your fork: `git push origin feature/your-feature-name`
-9. Open a Pull Request
+3. Run checks: `pnpm check`
+4. Run tests: `pnpm test`
+5. Build the project: `pnpm build`
+6. Commit your changes (see [Commit Convention](#commit-convention))
+7. Push to your fork: `git push origin feature/your-feature-name`
+8. Open a Pull Request
 
 ## Commit Convention
 
@@ -105,45 +104,34 @@ chore: upgrade dependencies
 
 **Note**: Commit messages are validated automatically via git hooks when you commit.
 
-## Changesets Workflow
+## Release Process
 
-We use [Changesets](https://github.com/changesets/changesets) for version management and changelog generation.
+Releases are automated using **Semantic Release**. We strictly follow the **Conventional Commits** specification to determine version bumps and generate changelogs automatically.
 
-### When to Create a Changeset
+### Commit Guidelines
 
-Create a changeset for any user-facing changes:
+It is mandatory to use correct commit types so the release system knows how to bump the version:
 
-- New features
-- Bug fixes
-- Breaking changes
-- Deprecations
+- **fix**: Patches a bug (PATCH version bump, e.g., 1.0.0 -> 1.0.1)
+- **feat**: Introduces a new feature (MINOR version bump, e.g., 1.0.0 -> 1.1.0)
+- **feat!** or **fix!** (or generic **BREAKING CHANGE** in footer): Introduces a breaking change (MAJOR version bump, e.g., 1.0.0 -> 2.0.0)
+- **chore**, **docs**, **style**, **refactor**, **test**: No version bump (usually)
 
-### How to Create a Changeset
+### How to Release
 
-```bash
-mise run changeset
-```
+1. Just create a Pull Request with your changes.
+2. Ensure your commit messages follow the convention above (enforced by `commitlint`).
+3. Merge the PR to `main`.
+4. The CI pipeline will automatically:
+   - Analyze the new commits.
+   - Determine the next version number.
+   - Generate release notes.
+   - Update `CHANGELOG.md`.
+   - Publish to npm.
+   - Create a GitHub Release.
+   - Build and push Docker images.
 
-This will prompt you to:
-
-1. Select packages to version (select `@n24q02m/better-notion-mcp`)
-2. Choose version bump type:
-   - **patch**: Bug fixes, minor changes
-   - **minor**: New features, backwards-compatible
-   - **major**: Breaking changes
-3. Write a summary of your changes
-
-The changeset will be saved in `.changeset/` directory and should be committed with your PR.
-
-### Example Changeset
-
-```markdown
----
-"@n24q02m/better-notion-mcp": minor
----
-
-Add bulk archive operation for pages, allowing multiple pages to be archived in a single API call
-```
+You do **not** need to create manual tags or changelog entries.
 
 ## Pull Request Guidelines
 
@@ -151,7 +139,7 @@ Add bulk archive operation for pages, allowing multiple pages to be archived in 
 - Update documentation if needed
 - Add tests for new functionality
 - Ensure all checks pass (`pnpm check`)
-- Include a changeset for user-facing changes
+
 - Follow existing code style
 - Write clear PR descriptions
 
@@ -160,11 +148,11 @@ Add bulk archive operation for pages, allowing multiple pages to be archived in 
 Before submitting your PR, ensure:
 
 - [ ] Code follows TypeScript best practices
-- [ ] All tests pass (`mise run test`)
-- [ ] Linting passes (`mise run lint`)
-- [ ] Formatting is correct (`mise run format:check`)
-- [ ] Type checking passes (`mise run type-check`)
-- [ ] Changeset created (`mise run changeset`)
+- [ ] All tests pass (`pnpm test`)
+- [ ] Linting passes (`pnpm lint`)
+- [ ] Formatting is correct (`pnpm format:check`)
+- [ ] Type checking passes (`pnpm type-check`)
+- [ ] Commit messages follow **Conventional Commits** (`feat:`, `fix:`, etc.)
 - [ ] Documentation updated (if needed)
 - [ ] Commit messages follow convention
 
@@ -181,13 +169,13 @@ Before submitting your PR, ensure:
 
 ```bash
 # Run all tests
-mise run test
+pnpm test
 
 # Run tests in watch mode
-mise run test:watch
+pnpm test:watch
 
 # Run tests with coverage
-mise run test:coverage
+pnpm test:coverage
 ```
 
 ### Writing Tests
@@ -209,24 +197,9 @@ better-notion-mcp/
 │       └── helpers/       # Helper utilities
 ├── scripts/               # Build scripts
 ├── tests/                 # Test files
-├── .changeset/           # Changesets directory
+
 └── build/                # Built output
 ```
-
-## Release Process
-
-Releases are automated via GitHub Actions and Changesets:
-
-1. Developer creates PR with changes + changeset
-2. PR is merged to `main`
-3. Changesets action creates a "Version Packages" PR
-4. Maintainer reviews and merges the version PR
-5. Packages are automatically published to npm
-6. Docker images are built and pushed
-
-You don't need to worry about versioning - just create good changesets!
-
-## Questions or Issues?
 
 Feel free to open an issue for:
 

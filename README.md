@@ -13,16 +13,16 @@
 
 ### vs. Official Notion MCP Server
 
-| Feature | Better Notion MCP | Official Notion MCP |
-|---------|-------------------|---------------------|
-| **Content Format** | **Markdown** (human-readable) | Raw JSON blocks (verbose) |
-| **Operations** | **Composite actions** (create page + content + properties in 1 call) | Atomic operations (2+ separate calls required) |
-| **Pagination** | **Auto-pagination** (transparent) | Manual cursor management |
-| **Bulk Operations** | **Native batch support** (create/update/delete multiple items at once) | Loop through items manually |
-| **Tool Architecture** | **7 mega action-based tools** (30+ actions) | 28+ individual endpoint tools |
-| **Database Query** | **Smart search** (auto-detect best match) | Manual filters + sorts required |
-| **Token Efficiency** | **Optimized for AI context** | Standard API responses |
-| **Setup** | Simple (NOTION_TOKEN only) | OAuth flow or token |
+| Feature               | Better Notion MCP                                                      | Official Notion MCP                            |
+| --------------------- | ---------------------------------------------------------------------- | ---------------------------------------------- |
+| **Content Format**    | **Markdown** (human-readable)                                          | Raw JSON blocks (verbose)                      |
+| **Operations**        | **Composite actions** (create page + content + properties in 1 call)   | Atomic operations (2+ separate calls required) |
+| **Pagination**        | **Auto-pagination** (transparent)                                      | Manual cursor management                       |
+| **Bulk Operations**   | **Native batch support** (create/update/delete multiple items at once) | Loop through items manually                    |
+| **Tool Architecture** | **7 mega action-based tools** (30+ actions)                            | 28+ individual endpoint tools                  |
+| **Database Query**    | **Smart search** (auto-detect best match)                              | Manual filters + sorts required                |
+| **Token Efficiency**  | **Optimized for AI context**                                           | Standard API responses                         |
+| **Setup**             | Simple (NOTION_TOKEN only)                                             | OAuth flow or token                            |
 
 ---
 
@@ -70,19 +70,6 @@ Get your Notion token: <https://www.notion.so/my-integrations> → Create integr
 
 **7 mega tools with 30+ actions:**
 
-| Tool | Actions | Description |
-|------|---------|-------------|
-| **pages** | `create`, `get`, `update`, `archive`, `restore`, `duplicate` | Complete page lifecycle with markdown support |
-| **databases** | `create`, `get`, `query`, `create_page`, `update_page`, `delete_page`, `create_data_source`, `update_data_source`, `update_database` | Database management with bulk operations |
-| **blocks** | `get`, `children`, `append`, `update`, `delete` | Granular block-level editing |
-| **users** | `list`, `get`, `me`, `from_workspace` | User management and discovery |
-| **workspace** | `info`, `search` | Workspace-wide operations |
-| **comments** | `list`, `create` | Comment operations with threading |
-| **content_convert** | `markdown-to-blocks`, `blocks-to-markdown` | Format conversion utility |
-
-**Key Features:**
-
-- **Markdown-First**: Natural language content format
 - **Composite Actions**: Combine operations (e.g., create page + content + properties in 1 call)
 - **Auto-Pagination**: Transparent handling of large datasets
 - **Bulk Operations**: Process multiple items efficiently
@@ -98,7 +85,7 @@ Get your Notion token: <https://www.notion.so/my-integrations> → Create integr
 git clone https://github.com/n24q02m/better-notion-mcp
 cd better-notion-mcp
 mise trust && mise install  # Install Node.js 22 + pnpm via mise
-mise run build              # Build the project
+pnpm build                  # Build the project
 ```
 
 **Prerequisites:** [mise](https://mise.jdx.dev/) for managing Node.js and pnpm versions.
@@ -106,17 +93,17 @@ mise run build              # Build the project
 ### Available Commands
 
 ```bash
-mise run dev              # Development with watch mode
-mise run build            # Build for production
-mise run test             # Run tests
-mise run check            # Run all checks (type-check + lint + format)
-mise run changeset        # Create a new changeset (for version bumps)
-mise run release          # Build and publish to npm
+pnpm run dev
+pnpm run build
+pnpm run test
+pnpm run test:watch
+pnpm run test:coverage
+pnpm run lint
+pnpm run format:check
+pnpm run type-check
+pnpm run check
+pnpm run changeset
 ```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for full development workflow.
-
----
 
 ## Contributing
 
