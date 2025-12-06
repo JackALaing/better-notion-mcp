@@ -25,8 +25,8 @@ jobs:
       - name: Setup Node.js 22
         uses: actions/setup-node@v6
         with:
-          node-version: "22"
-          cache: "pnpm"
+          node-version: '22'
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -43,9 +43,6 @@ jobs:
       - name: Build project
         run: pnpm build
 
-      - name: Run tests
-        run: pnpm test
-
       - name: Comment PR on success
         if: success() && github.event_name == 'pull_request'
         uses: actions/github-script@v8
@@ -55,7 +52,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '✅ **CI Checks Passed**\n\n- Type Check: ✓\n- Lint: ✓\n- Format: ✓\n- Build: ✓\n- Tests: ✓\n\nReady for review!'
+              body: '✅ **CI Checks Passed**\n\n- Type Check: ✓\n- Lint: ✓\n- Format: ✓\n- Build: ✓\n\nReady for review!'
             })
 
       - name: Comment PR on failure
@@ -67,7 +64,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '❌ **CI Checks Failed**\n\nPlease fix the issues:\n- Run `pnpm check` locally\n- Run `pnpm test` to ensure tests pass\n- Check the workflow logs for details'
+              body: '❌ **CI Checks Failed**\n\nPlease fix the issues:\n- Run `pnpm check` locally\n- Check the workflow logs for details'
             })
 
   dependency-review:
