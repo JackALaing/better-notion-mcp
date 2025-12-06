@@ -87,7 +87,7 @@
   "main": "build/src/init-server.js",
   "repository": {
     "type": "git",
-    "url": "git@github.com:n24q02m/better-notion-mcp.git"
+    "url": "https://github.com/n24q02m/better-notion-mcp.git"
   },
   "author": "n24q02m",
   "bugs": {
