@@ -1,3 +1,9 @@
+## [1.0.10](https://github.com/n24q02m/better-notion-mcp/compare/v1.0.9...v1.0.10) (2025-12-06)
+
+### Bug Fixes
+
+- trigger release 1.0.10 ([820f0a9](https://github.com/n24q02m/better-notion-mcp/commit/820f0a90e5883255383c499f89f655742eb40af2))
+
 # 1.0.0 (2025-12-06)
 
 ### Bug Fixes
