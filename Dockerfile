@@ -1,26 +1,19 @@
-FROM node:20-slim
+FROM node:24-slim
 
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm and supergateway globally
+RUN npm install -g pnpm supergateway
 
-# Copy package files
+# Copy package files and install dependencies
 COPY package.json pnpm-lock.yaml ./
-
-# Install dependencies
 RUN pnpm install --frozen-lockfile
 
-# Copy source code
+# Copy source and build
 COPY . .
-
-# Build TypeScript
 RUN pnpm run build
-
-# Install supergateway globally
-RUN npm install -g supergateway
 
 ENV PORT=8000
 
-# Run via supergateway
-CMD ["supergateway", "--stdio", "node dist/index.js", "--outputTransport", "streamableHttp", "--port", "8000", "--healthEndpoint", "/health"]
+# Run via supergateway for HTTP transport
+CMD ["supergateway", "--stdio", "node bin/cli.mjs", "--outputTransport", "streamableHttp", "--port", "8000", "--healthEndpoint", "/health"]
