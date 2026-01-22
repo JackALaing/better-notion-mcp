@@ -13,9 +13,6 @@ WORKDIR /app
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
-
 # Copy source code
 COPY . .
 
@@ -47,3 +44,4 @@ USER node
 
 # Set entrypoint
 ENTRYPOINT ["better-notion-mcp"]
+
