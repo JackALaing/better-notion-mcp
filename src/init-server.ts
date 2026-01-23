@@ -3,8 +3,9 @@
  * Using composite tools for human-friendly AI agent interactions
  */
 
+import express from 'express'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { registerTools } from './tools/registry.js'
 
 export async function initServer() {
@@ -16,6 +17,8 @@ export async function initServer() {
     console.error('Get your token from https://www.notion.so/my-integrations')
     process.exit(1)
   }
+
+  const PORT = process.env.PORT || 8000
 
   // Create MCP server
   const server = new Server(
@@ -34,8 +37,26 @@ export async function initServer() {
   // Register composite tools
   registerTools(server, notionToken)
 
-  // Connect stdio transport
-  const transport = new StdioServerTransport()
-  await server.connect(transport)
+  // Create Express app
+  const app = express()
+  app.use(express.json())
+
+  // Health endpoint
+  app.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'ok' })
+  })
+
+  // MCP endpoint
+  app.post('/mcp', async (req, res) => {
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
+    await server.connect(transport)
+    await transport.handleRequest(req, res, req.body)
+  })
+
+  // Start HTTP server
+  app.listen(PORT, () => {
+    console.log(`Better Notion MCP server running on port ${PORT}`)
+  })
+
   return server
 }
