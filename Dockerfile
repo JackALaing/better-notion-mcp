@@ -1,17 +1,13 @@
 FROM node:24-slim
-
 WORKDIR /app
 
-# Install pnpm globally
-RUN npm install -g pnpm
-
 # Copy package files and install dependencies
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # Copy source and build
 COPY . .
-RUN pnpm run build
+RUN npm run build
 
 ENV PORT=8000
 
