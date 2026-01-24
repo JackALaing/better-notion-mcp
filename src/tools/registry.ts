@@ -55,7 +55,7 @@ const TOOLS = [
   {
     name: 'pages',
     description:
-      'Page lifecycle: create, get, update, archive, restore, duplicate. Requires parent_id for create. Returns markdown content for get.',
+      'Page lifecycle: create, get, update, archive, restore, duplicate. Requires parent_id for create. Returns markdown content for get. PREFERRED for reading/editing page content.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -125,7 +125,7 @@ const TOOLS = [
   {
     name: 'blocks',
     description:
-      'Block-level content: get, children, append, update, delete. Page IDs are valid block IDs. Use for precise edits.',
+      'Block-level operations: get, children, append, update, delete. Use for nested content (toggles, columns, synced blocks) or precise single-block edits. For full page content, use pages tool instead.',
     inputSchema: {
       type: 'object',
       properties: {

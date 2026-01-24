@@ -51,7 +51,11 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
           block_id: input.block_id,
           total_children: blocksList.length,
           markdown,
-          blocks: blocksList
+          block_refs: blocksList.map((b: any) => ({
+            id: b.id,
+            type: b.type,
+            has_children: b.has_children
+          }))
         }
       }
 
