@@ -1,10 +1,26 @@
-import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 /**
  * Databases Mega Tool - Updated for Notion API 2025-09-03
  * Supports data_sources architecture
  */
 
 import type { Client } from '@notionhq/client'
+import { markdownToBlocks } from '../helpers/markdown.js'
+
+// Notion API limit for blocks.children.append
+const MAX_BLOCKS_PER_APPEND = 100
+
+/**
+ * Append blocks in chunks to respect Notion's 100-block limit per API call
+ */
+async function appendBlocksInChunks(notion: Client, blockId: string, blocks: any[]): Promise<void> {
+  for (let i = 0; i < blocks.length; i += MAX_BLOCKS_PER_APPEND) {
+    const chunk = blocks.slice(i, i + MAX_BLOCKS_PER_APPEND)
+    await notion.blocks.children.append({
+      block_id: blockId,
+      children: chunk as any
+    })
+  }
+}
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { autoPaginate } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
@@ -354,14 +370,11 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
       properties
     } as any)
 
-    // Add content if provided
+    // Add content if provided (with chunking for >100 blocks)
     if (item.content) {
       const blocks = markdownToBlocks(item.content)
       if (blocks.length > 0) {
-        await notion.blocks.children.append({
-          block_id: page.id,
-          children: blocks as any
-        })
+        await appendBlocksInChunks(notion, page.id, blocks)
       }
     }
 
