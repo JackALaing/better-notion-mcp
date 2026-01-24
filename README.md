@@ -19,7 +19,7 @@
 | **Pagination** | **Auto-pagination** | Manual cursor |
 | **Bulk Operations** | **Native batch support** | Loop manually |
 | **Tools** | **8 tools** (30+ actions) | 28+ endpoint tools |
-| **Token Efficiency** | **Optimized** | Standard |
+| **Token Efficiency** | **~550 tokens** | ~7,000 tokens (13x more) |
 
 ---
 
@@ -64,7 +64,7 @@ Get your token: <https://www.notion.so/my-integrations> ‚Üí Create integration ‚
 ## Tools
 
 | Tool | Actions |
-|------|---------|
+|------|---------|  
 | `pages` | create, get, update, archive, restore, duplicate |
 | `databases` | create, get, query, create_page, update_page, delete_page, create_data_source, update_data_source, update_database |
 | `blocks` | get, children, append, update, delete |
@@ -73,6 +73,18 @@ Get your token: <https://www.notion.so/my-integrations> ‚Üí Create integration ‚
 | `comments` | list, create |
 | `content_convert` | markdown-to-blocks, blocks-to-markdown |
 | `help` | Get full documentation for any tool |
+
+### Key Features
+
+**Page Content Operations:**
+- `pages.update` with `content` - Full page replacement using `erase_content` API (efficient single-call clear)
+- `pages.update` with `append_content` - Append to end of page
+- `pages.update` with `insert_after` - Insert content after a specific block ID
+- Auto-chunking for >100 blocks (Notion API limit)
+
+**Database Page Creation:**
+- `databases.create_page` supports `content` field for page body (not just properties)
+- Auto-chunking for large content
 
 ---
 
@@ -100,6 +112,9 @@ Get your token: <https://www.notion.so/my-integrations> ‚Üí Create integration ‚
 
 **Unsupported Blocks:**
 - ‚ùå Tables, Toggles, Callouts, Columns, Databases, Embeds, Images, Files
+
+**API Constraints:**
+- `insert_after` limited to <100 blocks per insert (use full `content` replacement for larger updates)
 
 ---
 
