@@ -102,7 +102,7 @@ const TOOLS = [
           description: 'Action to perform'
         },
         database_id: { type: 'string', description: 'Database ID (container)' },
-        data_source_id: { type: 'string', description: 'Data source ID (for update_data_source action)' },
+        data_source_id: { type: 'string', description: 'Data source ID (for update_data_source, or as alternative to database_id for create_page)' },
         parent_id: { type: 'string', description: 'Parent page ID (for create/update_database)' },
         title: { type: 'string', description: 'Title (for database or data source)' },
         description: { type: 'string', description: 'Description' },

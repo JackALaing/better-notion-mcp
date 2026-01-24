@@ -80,18 +80,36 @@ export async function workspace(notion: Client, input: WorkspaceInput): Promise<
           action: 'search',
           query: input.query,
           total: results.length,
-          results: results.map((item: any) => ({
-            id: item.id,
-            object: item.object,
-            title:
-              item.object === 'page'
-                ? item.properties?.title?.title?.[0]?.plain_text ||
-                  item.properties?.Name?.title?.[0]?.plain_text ||
-                  'Untitled'
-                : item.title?.[0]?.plain_text || 'Untitled',
-            url: item.url,
-            last_edited_time: item.last_edited_time
-          }))
+          results: results.map((item: any) => {
+            const result: any = {
+              id: item.id,
+              object: item.object,
+              title:
+                item.object === 'page'
+                  ? item.properties?.title?.title?.[0]?.plain_text ||
+                    item.properties?.Name?.title?.[0]?.plain_text ||
+                    'Untitled'
+                  : item.title?.[0]?.plain_text || 'Untitled',
+              url: item.url,
+              last_edited_time: item.last_edited_time
+            }
+
+            // For data_source objects, extract database_id from URL for convenience
+            // URL format: https://www.notion.so/{database_id}?v={view_id}
+            // The search result id is the data_source_id, but create_page needs database_id
+            if (item.object === 'data_source' && item.url) {
+              const urlMatch = item.url.match(/notion\.so\/([a-f0-9]+)/)
+              if (urlMatch) {
+                // Convert from URL format (no hyphens) to UUID format
+                const rawId = urlMatch[1]
+                if (rawId.length === 32) {
+                  result.database_id = `${rawId.slice(0, 8)}-${rawId.slice(8, 12)}-${rawId.slice(12, 16)}-${rawId.slice(16, 20)}-${rawId.slice(20)}`
+                }
+              }
+            }
+
+            return result
+          })
         }
       }
 

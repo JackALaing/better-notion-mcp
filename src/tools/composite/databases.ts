@@ -305,22 +305,36 @@ async function queryDatabase(notion: Client, input: DatabasesInput): Promise<any
 /**
  * Create pages in database (via data source)
  * Maps to: Multiple POST /v1/pages with data_source_id parent (API 2025-09-03)
+ *
+ * Accepts either database_id or data_source_id:
+ * - database_id: Resolves to first data source (standard workflow)
+ * - data_source_id: Uses directly (convenient when coming from workspace.search)
  */
 async function createDatabasePages(notion: Client, input: DatabasesInput): Promise<any> {
-  if (!input.database_id) {
-    throw new NotionMCPError('database_id required', 'VALIDATION_ERROR', 'Provide database_id')
+  let dataSourceId: string
+  let databaseId: string | undefined = input.database_id
+
+  if (input.data_source_id && !input.database_id) {
+    // data_source_id provided directly - use it without extra API call
+    dataSourceId = input.data_source_id
+  } else if (input.database_id) {
+    // database_id provided - resolve to data_source_id
+    const database: any = await notion.databases.retrieve({
+      database_id: input.database_id
+    })
+
+    if (!database.data_sources || database.data_sources.length === 0) {
+      throw new NotionMCPError('No data sources found in database', 'VALIDATION_ERROR', 'Database has no data sources')
+    }
+
+    dataSourceId = database.data_sources[0].id
+  } else {
+    throw new NotionMCPError(
+      'database_id or data_source_id required',
+      'VALIDATION_ERROR',
+      'Provide database_id (recommended) or data_source_id from workspace.search'
+    )
   }
-
-  // Get data source ID from database
-  const database: any = await notion.databases.retrieve({
-    database_id: input.database_id
-  })
-
-  if (!database.data_sources || database.data_sources.length === 0) {
-    throw new NotionMCPError('No data sources found in database', 'VALIDATION_ERROR', 'Database has no data sources')
-  }
-
-  const dataSourceId = database.data_sources[0].id
 
   const items = input.pages || (input.page_properties ? [{ properties: input.page_properties }] : [])
 
@@ -345,13 +359,19 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
     })
   }
 
-  return {
+  const response: any = {
     action: 'create_page',
-    database_id: input.database_id,
     data_source_id: dataSourceId,
     processed: results.length,
     results
   }
+
+  // Include database_id if known
+  if (databaseId) {
+    response.database_id = databaseId
+  }
+
+  return response
 }
 
 /**
