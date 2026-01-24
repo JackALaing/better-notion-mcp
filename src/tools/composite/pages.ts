@@ -229,18 +229,13 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
   // Handle content updates
   if (input.content || input.append_content || input.prepend_content) {
     if (input.content) {
-      // Replace all content
-      const existingBlocks = await autoPaginate((cursor) =>
-        notion.blocks.children.list({
-          block_id: input.page_id!,
-          start_cursor: cursor,
-          page_size: 100
-        })
-      )
-
-      for (const block of existingBlocks) {
-        await notion.blocks.delete({ block_id: block.id })
-      }
+      // Replace all content using erase_content API (single call instead of batch deletes)
+      // This is much faster than deleting blocks one by one
+      await notion.pages.update({
+        page_id: input.page_id,
+        // @ts-ignore - erase_content is a newer API parameter
+        erase_content: true
+      })
 
       const newBlocks = markdownToBlocks(input.content)
       if (newBlocks.length > 0) {
