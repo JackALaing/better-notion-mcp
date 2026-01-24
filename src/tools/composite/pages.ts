@@ -255,6 +255,17 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
       if (newBlocks.length > 0) {
         await appendBlocksInChunks(notion, input.page_id, newBlocks)
       }
+    } else if (input.append_content && input.insert_after) {
+      // Insert content after a specific block (positional insert)
+      const blocks = markdownToBlocks(input.append_content)
+      if (blocks.length > 0) {
+        // Use native Notion API 'after' parameter for positional insert
+        await notion.blocks.children.append({
+          block_id: input.page_id,
+          children: blocks as any,
+          after: input.insert_after
+        })
+      }
     } else if (input.append_content) {
       const blocks = markdownToBlocks(input.append_content)
       if (blocks.length > 0) {
@@ -284,24 +295,6 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
             children: newBlocks as any
           })
         }
-      }
-    } else if (input.insert_after) {
-      // Insert content after a specific block (requires append_content)
-      if (!input.append_content) {
-        throw new NotionMCPError(
-          'append_content is required when using insert_after',
-          'VALIDATION_ERROR',
-          'Provide append_content with the markdown to insert'
-        )
-      }
-      const blocks = markdownToBlocks(input.append_content)
-      if (blocks.length > 0) {
-        // Use native Notion API 'after' parameter for positional insert
-        await notion.blocks.children.append({
-          block_id: input.page_id,
-          children: blocks as any,
-          after: input.insert_after
-        })
       }
     }
   }
