@@ -6,6 +6,7 @@ Workspace: info, search.
 ## Important
 - Search returns only content **shared with integration**
 - Use `filter.object = "data_source"` for databases
+- Data source results include `database_id` for convenience
 
 ## Actions
 

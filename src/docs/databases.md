@@ -30,8 +30,12 @@ Database operations: create, get, query, create_page, update_page, delete_page, 
 ```
 
 ### create_page
+Accepts either `database_id` or `data_source_id`:
 ```json
 {"action": "create_page", "database_id": "xxx", "pages": [{"properties": {"Name": "Task 1", "Status": "Todo"}}]}
+```
+```json
+{"action": "create_page", "data_source_id": "yyy", "pages": [{"properties": {"Name": "Task 2"}}]}
 ```
 
 ### update_page
@@ -45,8 +49,8 @@ Database operations: create, get, query, create_page, update_page, delete_page, 
 ```
 
 ## Parameters
-- `database_id` - Database ID
-- `data_source_id` - Data source ID
+- `database_id` - Database ID (container)
+- `data_source_id` - Data source ID (can be used instead of database_id for create_page)
 - `parent_id` - Parent page ID
 - `title` - Title
 - `properties` - Schema properties
