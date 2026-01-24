@@ -1,3 +1,4 @@
+import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
 /**
  * Databases Mega Tool - Updated for Notion API 2025-09-03
  * Supports data_sources architecture
@@ -49,6 +50,7 @@ export interface DatabasesInput {
   pages?: Array<{
     page_id?: string
     properties: Record<string, any>
+    content?: string // Markdown content for the page body
   }>
 }
 
@@ -351,6 +353,17 @@ async function createDatabasePages(notion: Client, input: DatabasesInput): Promi
       parent: { type: 'data_source_id', data_source_id: dataSourceId },
       properties
     } as any)
+
+    // Add content if provided
+    if (item.content) {
+      const blocks = markdownToBlocks(item.content)
+      if (blocks.length > 0) {
+        await notion.blocks.children.append({
+          block_id: page.id,
+          children: blocks as any
+        })
+      }
+    }
 
     results.push({
       page_id: page.id,
