@@ -125,7 +125,7 @@ const TOOLS = [
   {
     name: 'blocks',
     description:
-      'Block-level operations: get, children, append, update, delete. Use for nested content (toggles, columns, synced blocks) or precise single-block edits. For full page content, use pages tool instead. To get block IDs for update/delete operations, set include_refs=true.',
+      'Block-level operations for NESTED content only (toggles, columns, synced blocks). Do NOT use for reading page content - use pages tool instead. Only use children action with include_refs=true when you need block IDs for subsequent update/delete.',
     inputSchema: {
       type: 'object',
       properties: {
