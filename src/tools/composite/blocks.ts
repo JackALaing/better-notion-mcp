@@ -12,6 +12,7 @@ export interface BlocksInput {
   action: 'get' | 'children' | 'append' | 'update' | 'delete'
   block_id: string
   content?: string // Markdown format
+  include_refs?: boolean // For children action: include block IDs for follow-up operations
 }
 
 /**
@@ -46,17 +47,20 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
           })
         )
         const markdown = blocksToMarkdown(blocksList as any)
-        return {
+        const result: any = {
           action: 'children',
           block_id: input.block_id,
           total_children: blocksList.length,
-          markdown,
-          block_refs: blocksList.map((b: any) => ({
+          markdown
+        }
+        if (input.include_refs) {
+          result.block_refs = blocksList.map((b: any) => ({
             id: b.id,
             type: b.type,
             has_children: b.has_children
           }))
         }
+        return result
       }
 
       case 'append': {

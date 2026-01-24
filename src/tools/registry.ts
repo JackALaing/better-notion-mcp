@@ -125,7 +125,7 @@ const TOOLS = [
   {
     name: 'blocks',
     description:
-      'Block-level operations: get, children, append, update, delete. Use for nested content (toggles, columns, synced blocks) or precise single-block edits. For full page content, use pages tool instead.',
+      'Block-level operations: get, children, append, update, delete. Use for nested content (toggles, columns, synced blocks) or precise single-block edits. For full page content, use pages tool instead. To get block IDs for update/delete operations, set include_refs=true.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -135,7 +135,8 @@ const TOOLS = [
           description: 'Action to perform'
         },
         block_id: { type: 'string', description: 'Block ID' },
-        content: { type: 'string', description: 'Markdown content (for append/update)' }
+        content: { type: 'string', description: 'Markdown content (for append/update)' },
+        include_refs: { type: 'boolean', description: 'For children action: return block IDs needed for update/delete operations (default: false)' }
       },
       required: ['action', 'block_id']
     }
