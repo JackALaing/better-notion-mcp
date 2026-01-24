@@ -70,6 +70,7 @@ const TOOLS = [
         content: { type: 'string', description: 'Markdown content' },
         append_content: { type: 'string', description: 'Markdown to append' },
         prepend_content: { type: 'string', description: 'Markdown to prepend' },
+        insert_after: { type: 'string', description: 'Block ID to insert append_content after (positional insert)' },
         parent_id: { type: 'string', description: 'Parent page or database ID' },
         properties: { type: 'object', description: 'Page properties (for database pages)' },
         icon: { type: 'string', description: 'Emoji icon' },

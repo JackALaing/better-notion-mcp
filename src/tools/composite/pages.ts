@@ -38,6 +38,7 @@ export interface PagesInput {
   content?: string // Markdown
   append_content?: string
   prepend_content?: string
+  insert_after?: string // Block ID to insert content after
   parent_id?: string
   properties?: Record<string, any>
   icon?: string
@@ -240,7 +241,7 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
   }
 
   // Handle content updates
-  if (input.content || input.append_content || input.prepend_content) {
+  if (input.content || input.append_content || input.prepend_content || input.insert_after) {
     if (input.content) {
       // Replace all content using erase_content API (single call instead of batch deletes)
       // This is much faster than deleting blocks one by one
@@ -283,6 +284,24 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
             children: newBlocks as any
           })
         }
+      }
+    } else if (input.insert_after) {
+      // Insert content after a specific block (requires append_content)
+      if (!input.append_content) {
+        throw new NotionMCPError(
+          'append_content is required when using insert_after',
+          'VALIDATION_ERROR',
+          'Provide append_content with the markdown to insert'
+        )
+      }
+      const blocks = markdownToBlocks(input.append_content)
+      if (blocks.length > 0) {
+        // Use native Notion API 'after' parameter for positional insert
+        await notion.blocks.children.append({
+          block_id: input.page_id,
+          children: blocks as any,
+          after: input.insert_after
+        })
       }
     }
   }
