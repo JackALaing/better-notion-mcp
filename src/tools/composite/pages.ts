@@ -10,6 +10,22 @@ import { autoPaginate } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
 
+// Notion API limit for blocks.children.append
+const MAX_BLOCKS_PER_APPEND = 100
+
+/**
+ * Append blocks in chunks to respect Notion's 100-block limit per API call
+ */
+async function appendBlocksInChunks(notion: Client, blockId: string, blocks: any[]): Promise<void> {
+  for (let i = 0; i < blocks.length; i += MAX_BLOCKS_PER_APPEND) {
+    const chunk = blocks.slice(i, i + MAX_BLOCKS_PER_APPEND)
+    await notion.blocks.children.append({
+      block_id: blockId,
+      children: chunk as any
+    })
+  }
+}
+
 export interface PagesInput {
   action: 'create' | 'get' | 'update' | 'archive' | 'restore' | 'duplicate'
 
@@ -111,10 +127,7 @@ async function createPage(notion: Client, input: PagesInput): Promise<any> {
   if (input.content) {
     const blocks = markdownToBlocks(input.content)
     if (blocks.length > 0) {
-      await notion.blocks.children.append({
-        block_id: page.id,
-        children: blocks as any
-      })
+      await appendBlocksInChunks(notion, page.id, blocks)
     }
   }
 
@@ -239,18 +252,12 @@ async function updatePage(notion: Client, input: PagesInput): Promise<any> {
 
       const newBlocks = markdownToBlocks(input.content)
       if (newBlocks.length > 0) {
-        await notion.blocks.children.append({
-          block_id: input.page_id,
-          children: newBlocks as any
-        })
+        await appendBlocksInChunks(notion, input.page_id, newBlocks)
       }
     } else if (input.append_content) {
       const blocks = markdownToBlocks(input.append_content)
       if (blocks.length > 0) {
-        await notion.blocks.children.append({
-          block_id: input.page_id,
-          children: blocks as any
-        })
+        await appendBlocksInChunks(notion, input.page_id, blocks)
       }
     } else if (input.prepend_content) {
       const existingBlocks = await autoPaginate((cursor) =>
@@ -356,10 +363,7 @@ async function duplicatePage(notion: Client, input: PagesInput): Promise<any> {
 
     // Copy content
     if (originalBlocks.length > 0) {
-      await notion.blocks.children.append({
-        block_id: duplicatePage.id,
-        children: originalBlocks as any
-      })
+      await appendBlocksInChunks(notion, duplicatePage.id, originalBlocks)
     }
 
     results.push({
