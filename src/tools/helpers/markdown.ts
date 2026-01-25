@@ -149,6 +149,19 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     else if (line.match(/^[-*]{3,}$/)) {
       blocks.push(createDivider())
     }
+    // Image: ![alt](url)
+    else if (line.match(/^!\[.*?\]\(.*?\)$/)) {
+      const imageMatch = line.match(/^!\[(.*?)\]\((.*?)\)$/)
+      if (imageMatch) {
+        const alt = imageMatch[1] || ''
+        const url = imageMatch[2] || ''
+        blocks.push(createImage(url, alt))
+      }
+    }
+    // Embed: standalone URL on its own line (common video/embed sites)
+    else if (line.match(/^https?:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com|twitter\.com|x\.com|codepen\.io|figma\.com|miro\.com|loom\.com|spotify\.com)/i)) {
+      blocks.push(createEmbed(line.trim()))
+    }
     // Regular paragraph
     else {
       blocks.push(createParagraph(line))
@@ -276,6 +289,36 @@ export function blocksToMarkdown(blocks: (NotionBlock | BlockWithChildren)[], de
               lines.push(blocksToMarkdown((column as BlockWithChildren).children!, depth))
             }
           }
+        }
+        break
+      case 'image':
+        // Handle image blocks
+        const imageUrl = block.image?.external?.url || block.image?.file?.url || ''
+        const imageCaption = block.image?.caption ? richTextToMarkdown(block.image.caption) : ''
+        if (imageUrl) {
+          lines.push(`![${imageCaption}](${imageUrl})`)
+        }
+        break
+      case 'embed':
+        // Handle embed blocks
+        const embedUrl = block.embed?.url || ''
+        if (embedUrl) {
+          lines.push(embedUrl)
+        }
+        break
+      case 'video':
+        // Handle video blocks (similar to embed)
+        const videoUrl = block.video?.external?.url || block.video?.file?.url || ''
+        if (videoUrl) {
+          lines.push(videoUrl)
+        }
+        break
+      case 'bookmark':
+        // Handle bookmark blocks
+        const bookmarkUrl = block.bookmark?.url || ''
+        const bookmarkCaption = block.bookmark?.caption ? richTextToMarkdown(block.bookmark.caption) : ''
+        if (bookmarkUrl) {
+          lines.push(bookmarkCaption ? `[${bookmarkCaption}](${bookmarkUrl})` : bookmarkUrl)
         }
         break
       default:
@@ -505,6 +548,35 @@ function createDivider(): NotionBlock {
     object: 'block',
     type: 'divider',
     divider: {}
+  }
+}
+
+function createImage(url: string, caption: string = ''): NotionBlock {
+  const block: any = {
+    object: 'block',
+    type: 'image',
+    image: {
+      type: 'external',
+      external: {
+        url: url
+      }
+    }
+  }
+  
+  if (caption) {
+    block.image.caption = parseRichText(caption)
+  }
+  
+  return block
+}
+
+function createEmbed(url: string): NotionBlock {
+  return {
+    object: 'block',
+    type: 'embed',
+    embed: {
+      url: url
+    }
   }
 }
 
