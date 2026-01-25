@@ -70,6 +70,65 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
       }
       blocks.push(createCodeBlock(codeLines.join('\n'), language))
     }
+    // Toggle (HTML details/summary)
+    else if (line.trim().startsWith('<details>')) {
+      const toggleLines: string[] = [line]
+      i++
+      let depth = 1
+      while (i < lines.length && depth > 0) {
+        if (lines[i].includes('<details>')) depth++
+        if (lines[i].includes('</details>')) depth--
+        if (depth > 0) toggleLines.push(lines[i])
+        i++
+      }
+      i-- // Back up one since the for loop will increment
+      blocks.push(createToggle(toggleLines))
+    }
+    // Table (starts with |)
+    else if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+      const tableLines: string[] = [line]
+      i++
+      while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
+        tableLines.push(lines[i])
+        i++
+      }
+      i-- // Back up one since the for loop will increment
+      blocks.push(createTable(tableLines))
+    }
+    // Callout (GitHub-style or emoji-prefixed quote)
+    else if (line.match(/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i)) {
+      const calloutMatch = line.match(/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*(.*)/i)
+      const calloutType = calloutMatch?.[1]?.toUpperCase() || 'NOTE'
+      const firstLineText = calloutMatch?.[2] || ''
+      const contentLines: string[] = firstLineText ? [firstLineText] : []
+      
+      // Collect continuation lines (lines starting with >)
+      i++
+      while (i < lines.length && lines[i].startsWith('>')) {
+        contentLines.push(lines[i].slice(1).trim())
+        i++
+      }
+      i-- // Back up one
+      
+      blocks.push(createCallout(contentLines.join('\n'), calloutType))
+    }
+    // Callout with emoji prefix (> 💡 text)
+    else if (line.match(/^>\s*[\u{1F300}-\u{1F9FF}]/u)) {
+      const emojiMatch = line.match(/^>\s*([\u{1F300}-\u{1F9FF}])\s*(.*)/u)
+      const emoji = emojiMatch?.[1] || '💡'
+      const firstLineText = emojiMatch?.[2] || ''
+      const contentLines: string[] = firstLineText ? [firstLineText] : []
+      
+      // Collect continuation lines
+      i++
+      while (i < lines.length && lines[i].startsWith('>')) {
+        contentLines.push(lines[i].slice(1).trim())
+        i++
+      }
+      i--
+      
+      blocks.push(createCalloutWithEmoji(contentLines.join('\n'), emoji))
+    }
     // Bulleted list
     else if (line.match(/^[-*]\s/)) {
       const text = line.slice(2)
@@ -186,6 +245,38 @@ export function blocksToMarkdown(blocks: (NotionBlock | BlockWithChildren)[], de
         break
       case 'divider':
         lines.push('---')
+        break
+      case 'table':
+        // Handle table blocks
+        if (blockWithChildren.children && blockWithChildren.children.length > 0) {
+          const tableRows = blockWithChildren.children
+          const rowStrings: string[] = []
+          
+          for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
+            const row = tableRows[rowIdx]
+            if (row.type === 'table_row' && row.table_row?.cells) {
+              const cells = row.table_row.cells.map((cell: RichText[]) => richTextToMarkdown(cell))
+              rowStrings.push(`| ${cells.join(' | ')} |`)
+              
+              // Add separator after header row
+              if (rowIdx === 0 && block.table?.has_column_header) {
+                rowStrings.push(`| ${cells.map(() => '---').join(' | ')} |`)
+              }
+            }
+          }
+          
+          lines.push(rowStrings.join('\n'))
+        }
+        break
+      case 'column_list':
+        // Handle column layouts - render each column's content sequentially
+        if (blockWithChildren.children && blockWithChildren.children.length > 0) {
+          for (const column of blockWithChildren.children) {
+            if (column.type === 'column' && (column as BlockWithChildren).children) {
+              lines.push(blocksToMarkdown((column as BlockWithChildren).children!, depth))
+            }
+          }
+        }
         break
       default:
         // Unsupported block type, skip
@@ -414,6 +505,165 @@ function createDivider(): NotionBlock {
     object: 'block',
     type: 'divider',
     divider: {}
+  }
+}
+
+/**
+ * Create a Notion table from markdown table lines
+ */
+function createTable(lines: string[]): NotionBlock {
+  // Parse table rows, skipping the separator line (|---|---|)
+  const rows: string[][] = []
+  
+  for (const line of lines) {
+    // Skip separator lines
+    if (line.match(/^\|[\s-:|]+\|$/)) continue
+    
+    // Parse cells: split by |, trim, filter empty
+    const cells = line
+      .split('|')
+      .map(cell => cell.trim())
+      .filter((cell, idx, arr) => idx !== 0 && idx !== arr.length) // Remove first/last empty from split
+    
+    if (cells.length > 0) {
+      rows.push(cells)
+    }
+  }
+  
+  if (rows.length === 0) {
+    return createParagraph('(empty table)')
+  }
+  
+  const columnCount = Math.max(...rows.map(r => r.length))
+  const hasHeader = rows.length > 1
+  
+  // Create table_row children
+  const tableRows: NotionBlock[] = rows.map(row => ({
+    object: 'block',
+    type: 'table_row',
+    table_row: {
+      cells: Array.from({ length: columnCount }, (_, i) => 
+        parseRichText(row[i] || '')
+      )
+    }
+  }))
+  
+  return {
+    object: 'block',
+    type: 'table',
+    table: {
+      table_width: columnCount,
+      has_column_header: hasHeader,
+      has_row_header: false,
+      children: tableRows
+    }
+  }
+}
+
+/**
+ * Create a Notion toggle from HTML details/summary
+ */
+function createToggle(lines: string[]): NotionBlock {
+  let title = 'Toggle'
+  const contentLines: string[] = []
+  let inSummary = false
+  let pastSummary = false
+  
+  for (const line of lines) {
+    // Extract summary text
+    const summaryMatch = line.match(/<summary>(.*?)<\/summary>/)
+    if (summaryMatch) {
+      title = summaryMatch[1].trim()
+      pastSummary = true
+      continue
+    }
+    
+    if (line.includes('<summary>')) {
+      inSummary = true
+      const afterTag = line.split('<summary>')[1]
+      if (afterTag) title = afterTag.trim()
+      continue
+    }
+    
+    if (line.includes('</summary>')) {
+      inSummary = false
+      pastSummary = true
+      const beforeTag = line.split('</summary>')[0]
+      if (beforeTag && inSummary) title += ' ' + beforeTag.trim()
+      continue
+    }
+    
+    if (inSummary) {
+      title += ' ' + line.trim()
+      continue
+    }
+    
+    // Skip details tags
+    if (line.trim() === '<details>' || line.trim() === '</details>') continue
+    
+    if (pastSummary && line.trim()) {
+      contentLines.push(line)
+    }
+  }
+  
+  // Parse content into child blocks
+  const children = contentLines.length > 0 
+    ? markdownToBlocks(contentLines.join('\n'))
+    : []
+  
+  const toggle: any = {
+    object: 'block',
+    type: 'toggle',
+    toggle: {
+      rich_text: parseRichText(title),
+      color: 'default'
+    }
+  }
+  
+  if (children.length > 0) {
+    toggle.toggle.children = children
+  }
+  
+  return toggle
+}
+
+/**
+ * Create a Notion callout from GitHub-style admonition
+ */
+function createCallout(text: string, type: string): NotionBlock {
+  const emojiMap: Record<string, string> = {
+    'NOTE': 'ℹ️',
+    'TIP': '💡',
+    'IMPORTANT': '❗',
+    'WARNING': '⚠️',
+    'CAUTION': '🔴'
+  }
+  
+  const emoji = emojiMap[type] || '💡'
+  
+  return {
+    object: 'block',
+    type: 'callout',
+    callout: {
+      rich_text: parseRichText(text),
+      icon: { type: 'emoji', emoji },
+      color: 'default'
+    }
+  }
+}
+
+/**
+ * Create a Notion callout with custom emoji
+ */
+function createCalloutWithEmoji(text: string, emoji: string): NotionBlock {
+  return {
+    object: 'block',
+    type: 'callout',
+    callout: {
+      rich_text: parseRichText(text),
+      icon: { type: 'emoji', emoji },
+      color: 'default'
+    }
   }
 }
 
