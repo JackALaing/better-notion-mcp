@@ -519,11 +519,11 @@ function createTable(lines: string[]): NotionBlock {
     // Skip separator lines
     if (line.match(/^\|[\s-:|]+\|$/)) continue
     
-    // Parse cells: split by |, trim, filter empty
+    // Parse cells: split by |, trim, filter empty first/last from split
     const cells = line
       .split('|')
       .map(cell => cell.trim())
-      .filter((cell, idx, arr) => idx !== 0 && idx !== arr.length) // Remove first/last empty from split
+      .filter((cell, idx, arr) => idx !== 0 && idx !== arr.length - 1)
     
     if (cells.length > 0) {
       rows.push(cells)
