@@ -102,29 +102,42 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         }
 
         const newContent = newBlocks[0]
+        const newContentType = newContent.type
         const updatePayload: any = {}
 
-        // Build update based on block type
-        if (
-          [
-            'paragraph',
-            'heading_1',
-            'heading_2',
-            'heading_3',
-            'bulleted_list_item',
-            'numbered_list_item',
-            'quote'
-          ].includes(blockType)
-        ) {
-          updatePayload[blockType] = {
-            rich_text: (newContent as any)[blockType]?.rich_text || []
-          }
-        } else {
+        // Supported block types for update
+        const supportedTypes = [
+          'paragraph',
+          'heading_1',
+          'heading_2',
+          'heading_3',
+          'bulleted_list_item',
+          'numbered_list_item',
+          'quote'
+        ]
+
+        if (!supportedTypes.includes(blockType)) {
           throw new NotionMCPError(
             `Block type '${blockType}' cannot be updated`,
             'VALIDATION_ERROR',
             'Only text blocks can be updated'
           )
+        }
+
+        // Extract rich_text from the parsed content (whatever type it parsed as)
+        // and apply it to the target block type
+        const richText = (newContent as any)[newContentType]?.rich_text || []
+        
+        if (richText.length === 0) {
+          throw new NotionMCPError(
+            'Could not extract text content',
+            'VALIDATION_ERROR',
+            'Ensure content produces valid rich text'
+          )
+        }
+
+        updatePayload[blockType] = {
+          rich_text: richText
         }
 
         await notion.blocks.update({
