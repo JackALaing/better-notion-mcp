@@ -6,6 +6,39 @@
 [![Docker](https://img.shields.io/docker/v/n24q02m/better-notion-mcp?label=docker)](https://hub.docker.com/r/n24q02m/better-notion-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+## Fork Enhancements
+
+This fork adds several improvements over the original better-notion-mcp:
+
+### Remote MCP Support (Claude.ai / Mobile)
+- **Dockerfile & native HTTP transport** - Enables Railway/cloud deployment with remote MCP URL for Claude.ai and mobile support
+
+### Block Type Support
+- **Tables** - Parse markdown tables (`| col | col |`) → Notion table blocks
+- **Toggles** - Parse `<details>/<summary>` HTML → Notion toggle blocks  
+- **Callouts** - Parse GitHub-style (`> [!NOTE]`) and emoji-prefixed (`> 💡`) → Notion callout blocks
+- **Images** - Parse `![alt](url)` → Notion image blocks
+- **Embeds** - Parse YouTube/Vimeo/Twitter/Figma/etc URLs → Notion embed blocks
+- **Reading support** - Markdown output for tables, columns, images, embeds, videos, bookmarks
+
+### Bug Fixes
+- **Nested children** - Recursive fetching so nested bullets, toggles, etc. are visible when reading pages
+- **Blocks update** - Fixed blank blocks bug by extracting rich_text from parsed content type
+- **Table columns** - Fixed off-by-one error that created extra empty columns
+- **data_source_id vs database_id** - Resolved mismatch in search→create workflow
+
+### Performance & Efficiency
+- **Context bloat fix** - Slimmed blocks response, clarified tool descriptions
+- **Opt-in block_refs** - `include_refs` parameter to avoid unnecessary metadata
+- **erase_content API** - Efficient single-call page content replacement
+- **Auto-chunking** - Block appends respect 100-block API limit
+- **Database content support** - `databases.create_page` supports `content` field with auto-chunking
+
+### New Features
+- **insert_after parameter** - Positional content insertion after specific block IDs
+
+---
+
 ## Why "Better"?
 
 **8 composite tools** that consolidate Notion's 28+ REST API endpoints into action-based operations optimized for AI agents.
@@ -104,14 +137,19 @@ Get your token: <https://www.notion.so/my-integrations> → Create integration �
 
 ---
 
-## Limitations
+## Block Support
 
 **Supported Blocks:**
-- ✅ Headings, Paragraphs, Lists, Code blocks, Quotes, Dividers
+- ✅ Headings, Paragraphs, Lists (bulleted, numbered, to-do), Code blocks, Quotes, Dividers
+- ✅ Tables, Toggles, Callouts, Images, Embeds (YouTube, Vimeo, Twitter, Figma, etc.)
 - ✅ Inline: bold, italic, code, strikethrough, links
+- ✅ Nested children (recursive fetching for toggles, lists, etc.)
+
+**Read-only Blocks** (rendered as markdown when reading, but not created from markdown):
+- 📖 Columns (rendered sequentially), Videos, Bookmarks
 
 **Unsupported Blocks:**
-- ❌ Tables, Toggles, Callouts, Columns, Databases, Embeds, Images, Files
+- ❌ Databases (inline), Files, Synced blocks
 
 **API Constraints:**
 - `insert_after` limited to <100 blocks per insert (use full `content` replacement for larger updates)
