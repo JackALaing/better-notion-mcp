@@ -105,12 +105,22 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
 }
 
 /**
- * Convert Notion blocks to markdown
+ * Block with optional nested children (for recursive fetching)
  */
-export function blocksToMarkdown(blocks: NotionBlock[]): string {
+export interface BlockWithChildren extends NotionBlock {
+  children?: BlockWithChildren[]
+}
+
+/**
+ * Convert Notion blocks to markdown, handling nested children
+ */
+export function blocksToMarkdown(blocks: (NotionBlock | BlockWithChildren)[], depth: number = 0): string {
   const lines: string[] = []
+  const indent = '  '.repeat(depth) // 2 spaces per nesting level
 
   for (const block of blocks) {
+    const blockWithChildren = block as BlockWithChildren
+
     switch (block.type) {
       case 'heading_1':
         lines.push(`# ${richTextToMarkdown(block.heading_1.rich_text)}`)
@@ -122,13 +132,36 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         lines.push(`### ${richTextToMarkdown(block.heading_3.rich_text)}`)
         break
       case 'paragraph':
-        lines.push(richTextToMarkdown(block.paragraph.rich_text))
+        lines.push(`${indent}${richTextToMarkdown(block.paragraph.rich_text)}`)
         break
       case 'bulleted_list_item':
-        lines.push(`- ${richTextToMarkdown(block.bulleted_list_item.rich_text)}`)
+        lines.push(`${indent}- ${richTextToMarkdown(block.bulleted_list_item.rich_text)}`)
+        // Recursively process nested children
+        if (blockWithChildren.children && blockWithChildren.children.length > 0) {
+          lines.push(blocksToMarkdown(blockWithChildren.children, depth + 1))
+        }
         break
       case 'numbered_list_item':
-        lines.push(`1. ${richTextToMarkdown(block.numbered_list_item.rich_text)}`)
+        lines.push(`${indent}1. ${richTextToMarkdown(block.numbered_list_item.rich_text)}`)
+        // Recursively process nested children
+        if (blockWithChildren.children && blockWithChildren.children.length > 0) {
+          lines.push(blocksToMarkdown(blockWithChildren.children, depth + 1))
+        }
+        break
+      case 'to_do':
+        const checked = block.to_do?.checked ? 'x' : ' '
+        lines.push(`${indent}- [${checked}] ${richTextToMarkdown(block.to_do.rich_text)}`)
+        if (blockWithChildren.children && blockWithChildren.children.length > 0) {
+          lines.push(blocksToMarkdown(blockWithChildren.children, depth + 1))
+        }
+        break
+      case 'toggle':
+        lines.push(`${indent}<details>`)
+        lines.push(`${indent}<summary>${richTextToMarkdown(block.toggle.rich_text)}</summary>`)
+        if (blockWithChildren.children && blockWithChildren.children.length > 0) {
+          lines.push(blocksToMarkdown(blockWithChildren.children, depth + 1))
+        }
+        lines.push(`${indent}</details>`)
         break
       case 'code':
         lines.push(`\`\`\`${block.code.language || ''}`)
@@ -137,6 +170,19 @@ export function blocksToMarkdown(blocks: NotionBlock[]): string {
         break
       case 'quote':
         lines.push(`> ${richTextToMarkdown(block.quote.rich_text)}`)
+        if (blockWithChildren.children && blockWithChildren.children.length > 0) {
+          // Prefix each line of nested content with >
+          const nestedContent = blocksToMarkdown(blockWithChildren.children, 0)
+          lines.push(nestedContent.split('\n').map(line => `> ${line}`).join('\n'))
+        }
+        break
+      case 'callout':
+        const icon = block.callout?.icon?.emoji || '💡'
+        lines.push(`${indent}> ${icon} ${richTextToMarkdown(block.callout.rich_text)}`)
+        if (blockWithChildren.children && blockWithChildren.children.length > 0) {
+          const nestedContent = blocksToMarkdown(blockWithChildren.children, 0)
+          lines.push(nestedContent.split('\n').map(line => `${indent}> ${line}`).join('\n'))
+        }
         break
       case 'divider':
         lines.push('---')

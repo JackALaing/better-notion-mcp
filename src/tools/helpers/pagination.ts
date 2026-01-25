@@ -102,3 +102,42 @@ export async function processBatches<T, R>(
 
   return results
 }
+
+/**
+ * Extended block type with nested children
+ */
+export interface BlockWithChildren {
+  id: string
+  type: string
+  has_children: boolean
+  children?: BlockWithChildren[]
+  [key: string]: any
+}
+
+/**
+ * Recursively fetch all blocks including nested children
+ * Notion's blocks.children.list only returns direct children, so we need to
+ * recursively fetch children for any block where has_children is true.
+ */
+export async function fetchBlocksRecursively(
+  fetchFn: (blockId: string, cursor?: string) => Promise<{ results: any[]; next_cursor: string | null; has_more: boolean }>,
+  blockId: string,
+  maxDepth: number = 10
+): Promise<BlockWithChildren[]> {
+  if (maxDepth <= 0) return []
+
+  const blocks = await autoPaginate((cursor) => fetchFn(blockId, cursor))
+
+  // Recursively fetch children for blocks that have them
+  const blocksWithChildren: BlockWithChildren[] = await Promise.all(
+    blocks.map(async (block: any): Promise<BlockWithChildren> => {
+      const blockWithChildren: BlockWithChildren = { ...block }
+      if (block.has_children) {
+        blockWithChildren.children = await fetchBlocksRecursively(fetchFn, block.id, maxDepth - 1)
+      }
+      return blockWithChildren
+    })
+  )
+
+  return blocksWithChildren
+}

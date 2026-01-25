@@ -6,7 +6,7 @@
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
 import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
-import { autoPaginate } from '../helpers/pagination.js'
+import { autoPaginate, fetchBlocksRecursively } from '../helpers/pagination.js'
 
 export interface BlocksInput {
   action: 'get' | 'children' | 'append' | 'update' | 'delete'
@@ -39,12 +39,15 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
       }
 
       case 'children': {
-        const blocksList = await autoPaginate((cursor) =>
-          notion.blocks.children.list({
-            block_id: input.block_id,
-            start_cursor: cursor,
-            page_size: 100
-          })
+        // Recursively fetch all blocks including nested children
+        const blocksList = await fetchBlocksRecursively(
+          (blockId, cursor) =>
+            notion.blocks.children.list({
+              block_id: blockId,
+              start_cursor: cursor,
+              page_size: 100
+            }),
+          input.block_id
         )
         const markdown = blocksToMarkdown(blocksList as any)
         const result: any = {
@@ -54,11 +57,18 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
           markdown
         }
         if (input.include_refs) {
-          result.block_refs = blocksList.map((b: any) => ({
-            id: b.id,
-            type: b.type,
-            has_children: b.has_children
-          }))
+          // Flatten block refs for include_refs (recursive would complicate the interface)
+          const flattenRefs = (blocks: any[]): any[] => {
+            const refs: any[] = []
+            for (const b of blocks) {
+              refs.push({ id: b.id, type: b.type, has_children: b.has_children })
+              if (b.children) {
+                refs.push(...flattenRefs(b.children))
+              }
+            }
+            return refs
+          }
+          result.block_refs = flattenRefs(blocksList)
         }
         return result
       }
