@@ -71,7 +71,9 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
 
     switch (input.action) {
       case 'get': {
-        const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
+        // block_id is guaranteed by validation above
+        const blockId = input.block_id!
+        const block: any = await notion.blocks.retrieve({ block_id: blockId })
         return {
           action: 'get',
           block_id: block.id,
@@ -83,20 +85,22 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
       }
 
       case 'children': {
+        // block_id is guaranteed by validation above
+        const blockId = input.block_id!
         // Recursively fetch all blocks including nested children
         const blocksList = await fetchBlocksRecursively(
-          (blockId, cursor) =>
+          (blkId, cursor) =>
             notion.blocks.children.list({
-              block_id: blockId,
+              block_id: blkId,
               start_cursor: cursor,
               page_size: 100
             }),
-          input.block_id
+          blockId
         )
         const markdown = blocksToMarkdown(blocksList as any)
         const result: any = {
           action: 'children',
-          block_id: input.block_id,
+          block_id: blockId,
           total_children: blocksList.length,
           markdown
         }
@@ -118,26 +122,30 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
       }
 
       case 'append': {
+        // block_id is guaranteed by validation above
+        const blockId = input.block_id!
         if (!input.content) {
           throw new NotionMCPError('content required for append', 'VALIDATION_ERROR', 'Provide markdown content')
         }
         const blocksList = markdownToBlocks(input.content)
         await notion.blocks.children.append({
-          block_id: input.block_id,
+          block_id: blockId,
           children: blocksList as any
         })
         return {
           action: 'append',
-          block_id: input.block_id,
+          block_id: blockId,
           appended_count: blocksList.length
         }
       }
 
       case 'update': {
+        // block_id is guaranteed by validation above
+        const blockId = input.block_id!
         if (!input.content) {
           throw new NotionMCPError('content required for update', 'VALIDATION_ERROR', 'Provide markdown content')
         }
-        const block: any = await notion.blocks.retrieve({ block_id: input.block_id })
+        const block: any = await notion.blocks.retrieve({ block_id: blockId })
         const blockType = block.type
         const newBlocks = markdownToBlocks(input.content)
 
@@ -185,13 +193,13 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         }
 
         await notion.blocks.update({
-          block_id: input.block_id,
+          block_id: blockId,
           ...updatePayload
         } as any)
 
         return {
           action: 'update',
-          block_id: input.block_id,
+          block_id: blockId,
           type: blockType,
           updated: true
         }
