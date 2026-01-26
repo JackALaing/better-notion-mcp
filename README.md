@@ -21,6 +21,10 @@ This fork adds several improvements over the original better-notion-mcp:
 - **Embeds** - Parse YouTube/Vimeo/Twitter/Figma/etc URLs → Notion embed blocks
 - **Reading support** - Markdown output for tables, columns, images, embeds, videos, bookmarks
 
+### List & Checkbox Support
+- **Nested lists** - Indented bullets under numbered lists become proper children blocks (not flat paragraphs)
+- **Checkbox/to-do syntax** - `- [ ]` and `- [x]` markdown creates Notion `to_do` blocks with correct checked state
+
 ### Bug Fixes
 - **Nested children** - Recursive fetching so nested bullets, toggles, etc. are visible when reading pages
 - **Blocks update** - Fixed blank blocks bug by extracting rich_text from parsed content type
@@ -36,6 +40,10 @@ This fork adds several improvements over the original better-notion-mcp:
 
 ### New Features
 - **insert_after parameter** - Positional content insertion after specific block IDs
+- **Bulk block deletion** - Delete multiple blocks in one call via `block_ids` array
+- **Cascade delete** - Auto-delete all nested children with `cascade: true` option
+- **Per-block error reporting** - Delete results include success/failure status per block with error messages
+- **Inline block IDs** - `include_block_ids: true` embeds block IDs as HTML comments (`<!-- block:xxx -->`) in markdown output for targeted edits
 
 ---
 
