@@ -126,7 +126,7 @@ const TOOLS = [
   {
     name: 'blocks',
     description:
-      'Block-level operations for NESTED content only (toggles, columns, synced blocks). Do NOT use for reading page content - use pages tool instead. Only use children action with include_refs=true when you need block IDs for subsequent update/delete.',
+      'Block-level operations for NESTED content only (toggles, columns, synced blocks). Do NOT use for reading page content - use pages tool instead. Only use children action with include_refs=true when you need block IDs for subsequent update/delete. Delete supports bulk operations via block_ids array and cascade option for auto-deleting children.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -135,11 +135,23 @@ const TOOLS = [
           enum: ['get', 'children', 'append', 'update', 'delete'],
           description: 'Action to perform'
         },
-        block_id: { type: 'string', description: 'Block ID' },
+        block_id: { type: 'string', description: 'Block ID (required for all actions except bulk delete)' },
+        block_ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'For delete: array of block IDs for bulk deletion'
+        },
         content: { type: 'string', description: 'Markdown content (for append/update)' },
-        include_refs: { type: 'boolean', description: 'For children action: return block IDs needed for update/delete operations (default: false)' }
+        include_refs: {
+          type: 'boolean',
+          description: 'For children action: return block IDs needed for update/delete operations (default: false)'
+        },
+        cascade: {
+          type: 'boolean',
+          description: 'For delete: also delete all nested children (default: false)'
+        }
       },
-      required: ['action', 'block_id']
+      required: ['action']
     }
   },
   {

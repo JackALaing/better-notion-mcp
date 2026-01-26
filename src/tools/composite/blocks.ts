@@ -10,9 +10,43 @@ import { autoPaginate, fetchBlocksRecursively } from '../helpers/pagination.js'
 
 export interface BlocksInput {
   action: 'get' | 'children' | 'append' | 'update' | 'delete'
-  block_id: string
+  block_id?: string
+  block_ids?: string[] // For bulk delete
   content?: string // Markdown format
   include_refs?: boolean // For children action: include block IDs for follow-up operations
+  cascade?: boolean // For delete: also delete all nested children
+}
+
+/**
+ * Recursively collect all child block IDs for cascade delete
+ */
+async function collectChildBlockIds(notion: Client, blockId: string): Promise<string[]> {
+  const childIds: string[] = []
+
+  try {
+    let cursor: string | undefined
+    do {
+      const response = await notion.blocks.children.list({
+        block_id: blockId,
+        start_cursor: cursor,
+        page_size: 100
+      })
+
+      for (const block of response.results as any[]) {
+        childIds.push(block.id)
+        if (block.has_children) {
+          const grandchildren = await collectChildBlockIds(notion, block.id)
+          childIds.push(...grandchildren)
+        }
+      }
+
+      cursor = response.has_more ? response.next_cursor ?? undefined : undefined
+    } while (cursor)
+  } catch {
+    // Block may not have children or may not exist - ignore errors
+  }
+
+  return childIds
 }
 
 /**
@@ -21,7 +55,17 @@ export interface BlocksInput {
  */
 export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
   return withErrorHandling(async () => {
-    if (!input.block_id) {
+    // Validation: delete allows block_id OR block_ids, others require block_id
+    if (input.action === 'delete') {
+      const ids = input.block_ids || (input.block_id ? [input.block_id] : [])
+      if (ids.length === 0) {
+        throw new NotionMCPError(
+          'block_id or block_ids required for delete',
+          'VALIDATION_ERROR',
+          'Provide at least one block ID to delete'
+        )
+      }
+    } else if (!input.block_id) {
       throw new NotionMCPError('block_id required', 'VALIDATION_ERROR', 'Provide block_id')
     }
 
@@ -154,11 +198,46 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
       }
 
       case 'delete': {
-        await notion.blocks.delete({ block_id: input.block_id })
+        const blockIds = input.block_ids || (input.block_id ? [input.block_id] : [])
+        const results: Array<{ block_id: string; deleted: boolean; error?: string }> = []
+
+        // Collect all IDs to delete (including children if cascade)
+        let idsToDelete = [...blockIds]
+
+        if (input.cascade) {
+          for (const blockId of blockIds) {
+            const childIds = await collectChildBlockIds(notion, blockId)
+            idsToDelete.push(...childIds)
+          }
+          // Remove duplicates and reverse for bottom-up deletion (children first)
+          idsToDelete = [...new Set(idsToDelete)].reverse()
+        }
+
+        // Delete blocks sequentially
+        for (const blockId of idsToDelete) {
+          try {
+            await notion.blocks.delete({ block_id: blockId })
+            results.push({ block_id: blockId, deleted: true })
+          } catch (error: any) {
+            const errorMsg = error?.body?.message || error?.message || 'Unknown error'
+            results.push({
+              block_id: blockId,
+              deleted: false,
+              error: errorMsg
+            })
+          }
+        }
+
+        const successCount = results.filter((r) => r.deleted).length
+        const failCount = results.filter((r) => !r.deleted).length
+
         return {
           action: 'delete',
-          block_id: input.block_id,
-          deleted: true
+          processed: results.length,
+          success_count: successCount,
+          fail_count: failCount,
+          cascade: input.cascade ?? false,
+          results
         }
       }
 
