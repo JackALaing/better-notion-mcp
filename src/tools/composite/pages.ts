@@ -5,7 +5,7 @@
 
 import type { Client } from '@notionhq/client'
 import { NotionMCPError, withErrorHandling } from '../helpers/errors.js'
-import { blocksToMarkdown, markdownToBlocks } from '../helpers/markdown.js'
+import { blocksToMarkdown, markdownToBlocks, type BlocksToMarkdownOptions } from '../helpers/markdown.js'
 import { autoPaginate, fetchBlocksRecursively } from '../helpers/pagination.js'
 import { convertToNotionProperties } from '../helpers/properties.js'
 import * as RichText from '../helpers/richtext.js'
@@ -46,6 +46,9 @@ export interface PagesInput {
 
   // Archive/Restore params
   archived?: boolean
+
+  // Get params
+  include_block_ids?: boolean // Embed block IDs as HTML comments in markdown output
 }
 
 /**
@@ -162,7 +165,7 @@ async function getPage(notion: Client, input: PagesInput): Promise<any> {
     input.page_id!
   )
 
-  const markdown = blocksToMarkdown(blocks as any)
+  const markdown = blocksToMarkdown(blocks as any, 0, { includeBlockIds: input.include_block_ids })
 
   // Extract properties
   const properties: any = {}

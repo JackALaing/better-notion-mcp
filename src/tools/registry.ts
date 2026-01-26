@@ -55,7 +55,7 @@ const TOOLS = [
   {
     name: 'pages',
     description:
-      'Page lifecycle: create, get, update, archive, restore, duplicate. Requires parent_id for create. Returns markdown content for get. PREFERRED for reading/editing page content.',
+      'Page lifecycle: create, get, update, archive, restore, duplicate. Requires parent_id for create. Returns markdown content for get. PREFERRED for reading/editing page content. Use include_block_ids for targeted block operations.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -75,7 +75,11 @@ const TOOLS = [
         properties: { type: 'object', description: 'Page properties (for database pages)' },
         icon: { type: 'string', description: 'Emoji icon' },
         cover: { type: 'string', description: 'Cover image URL' },
-        archived: { type: 'boolean', description: 'Archive status' }
+        archived: { type: 'boolean', description: 'Archive status' },
+        include_block_ids: {
+          type: 'boolean',
+          description: 'For get: embed block IDs inline as HTML comments (e.g., "## Heading <!-- block:abc123 -->")'
+        }
       },
       required: ['action']
     }

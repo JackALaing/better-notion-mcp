@@ -201,101 +201,121 @@ export interface BlockWithChildren extends NotionBlock {
   children?: BlockWithChildren[]
 }
 
+export interface BlocksToMarkdownOptions {
+  includeBlockIds?: boolean
+}
+
 /**
  * Convert Notion blocks to markdown, handling nested children
  */
-export function blocksToMarkdown(blocks: (NotionBlock | BlockWithChildren)[], depth: number = 0): string {
+export function blocksToMarkdown(
+  blocks: (NotionBlock | BlockWithChildren)[],
+  depth: number = 0,
+  options: BlocksToMarkdownOptions = {}
+): string {
   const lines: string[] = []
   const indent = '  '.repeat(depth) // 2 spaces per nesting level
+  const { includeBlockIds = false } = options
+
+  // Helper to append block ID comment if enabled
+  const withBlockId = (line: string, blockId?: string): string => {
+    if (includeBlockIds && blockId) {
+      return `${line} <!-- block:${blockId} -->`
+    }
+    return line
+  }
 
   for (const block of blocks) {
     const blockWithChildren = block as BlockWithChildren
+    const blockId = (block as any).id
 
     switch (block.type) {
       case 'heading_1':
-        lines.push(`# ${richTextToMarkdown(block.heading_1.rich_text)}`)
+        lines.push(withBlockId(`# ${richTextToMarkdown(block.heading_1.rich_text)}`, blockId))
         break
       case 'heading_2':
-        lines.push(`## ${richTextToMarkdown(block.heading_2.rich_text)}`)
+        lines.push(withBlockId(`## ${richTextToMarkdown(block.heading_2.rich_text)}`, blockId))
         break
       case 'heading_3':
-        lines.push(`### ${richTextToMarkdown(block.heading_3.rich_text)}`)
+        lines.push(withBlockId(`### ${richTextToMarkdown(block.heading_3.rich_text)}`, blockId))
         break
       case 'paragraph':
-        lines.push(`${indent}${richTextToMarkdown(block.paragraph.rich_text)}`)
+        lines.push(withBlockId(`${indent}${richTextToMarkdown(block.paragraph.rich_text)}`, blockId))
         break
       case 'bulleted_list_item':
-        lines.push(`${indent}- ${richTextToMarkdown(block.bulleted_list_item.rich_text)}`)
+        lines.push(withBlockId(`${indent}- ${richTextToMarkdown(block.bulleted_list_item.rich_text)}`, blockId))
         // Recursively process nested children
         if (blockWithChildren.children && blockWithChildren.children.length > 0) {
-          lines.push(blocksToMarkdown(blockWithChildren.children, depth + 1))
+          lines.push(blocksToMarkdown(blockWithChildren.children, depth + 1, options))
         }
         break
       case 'numbered_list_item':
-        lines.push(`${indent}1. ${richTextToMarkdown(block.numbered_list_item.rich_text)}`)
+        lines.push(withBlockId(`${indent}1. ${richTextToMarkdown(block.numbered_list_item.rich_text)}`, blockId))
         // Recursively process nested children
         if (blockWithChildren.children && blockWithChildren.children.length > 0) {
-          lines.push(blocksToMarkdown(blockWithChildren.children, depth + 1))
+          lines.push(blocksToMarkdown(blockWithChildren.children, depth + 1, options))
         }
         break
       case 'to_do':
         const checked = block.to_do?.checked ? 'x' : ' '
-        lines.push(`${indent}- [${checked}] ${richTextToMarkdown(block.to_do.rich_text)}`)
+        lines.push(withBlockId(`${indent}- [${checked}] ${richTextToMarkdown(block.to_do.rich_text)}`, blockId))
         if (blockWithChildren.children && blockWithChildren.children.length > 0) {
-          lines.push(blocksToMarkdown(blockWithChildren.children, depth + 1))
+          lines.push(blocksToMarkdown(blockWithChildren.children, depth + 1, options))
         }
         break
       case 'toggle':
-        lines.push(`${indent}<details>`)
+        lines.push(withBlockId(`${indent}<details>`, blockId))
         lines.push(`${indent}<summary>${richTextToMarkdown(block.toggle.rich_text)}</summary>`)
         if (blockWithChildren.children && blockWithChildren.children.length > 0) {
-          lines.push(blocksToMarkdown(blockWithChildren.children, depth + 1))
+          lines.push(blocksToMarkdown(blockWithChildren.children, depth + 1, options))
         }
         lines.push(`${indent}</details>`)
         break
       case 'code':
-        lines.push(`\`\`\`${block.code.language || ''}`)
+        lines.push(withBlockId(`\`\`\`${block.code.language || ''}`, blockId))
         lines.push(richTextToMarkdown(block.code.rich_text))
         lines.push('```')
         break
       case 'quote':
-        lines.push(`> ${richTextToMarkdown(block.quote.rich_text)}`)
+        lines.push(withBlockId(`> ${richTextToMarkdown(block.quote.rich_text)}`, blockId))
         if (blockWithChildren.children && blockWithChildren.children.length > 0) {
           // Prefix each line of nested content with >
-          const nestedContent = blocksToMarkdown(blockWithChildren.children, 0)
+          const nestedContent = blocksToMarkdown(blockWithChildren.children, 0, options)
           lines.push(nestedContent.split('\n').map(line => `> ${line}`).join('\n'))
         }
         break
       case 'callout':
         const icon = block.callout?.icon?.emoji || '💡'
-        lines.push(`${indent}> ${icon} ${richTextToMarkdown(block.callout.rich_text)}`)
+        lines.push(withBlockId(`${indent}> ${icon} ${richTextToMarkdown(block.callout.rich_text)}`, blockId))
         if (blockWithChildren.children && blockWithChildren.children.length > 0) {
-          const nestedContent = blocksToMarkdown(blockWithChildren.children, 0)
+          const nestedContent = blocksToMarkdown(blockWithChildren.children, 0, options)
           lines.push(nestedContent.split('\n').map(line => `${indent}> ${line}`).join('\n'))
         }
         break
       case 'divider':
-        lines.push('---')
+        lines.push(withBlockId('---', blockId))
         break
       case 'table':
         // Handle table blocks
         if (blockWithChildren.children && blockWithChildren.children.length > 0) {
           const tableRows = blockWithChildren.children
           const rowStrings: string[] = []
-          
+
           for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
             const row = tableRows[rowIdx]
             if (row.type === 'table_row' && row.table_row?.cells) {
               const cells = row.table_row.cells.map((cell: RichText[]) => richTextToMarkdown(cell))
-              rowStrings.push(`| ${cells.join(' | ')} |`)
-              
+              const rowLine = `| ${cells.join(' | ')} |`
+              // Add block ID to first row only (represents the table)
+              rowStrings.push(rowIdx === 0 ? withBlockId(rowLine, blockId) : rowLine)
+
               // Add separator after header row
               if (rowIdx === 0 && block.table?.has_column_header) {
                 rowStrings.push(`| ${cells.map(() => '---').join(' | ')} |`)
               }
             }
           }
-          
+
           lines.push(rowStrings.join('\n'))
         }
         break
@@ -304,7 +324,7 @@ export function blocksToMarkdown(blocks: (NotionBlock | BlockWithChildren)[], de
         if (blockWithChildren.children && blockWithChildren.children.length > 0) {
           for (const column of blockWithChildren.children) {
             if (column.type === 'column' && (column as BlockWithChildren).children) {
-              lines.push(blocksToMarkdown((column as BlockWithChildren).children!, depth))
+              lines.push(blocksToMarkdown((column as BlockWithChildren).children!, depth, options))
             }
           }
         }
@@ -314,21 +334,21 @@ export function blocksToMarkdown(blocks: (NotionBlock | BlockWithChildren)[], de
         const imageUrl = block.image?.external?.url || block.image?.file?.url || ''
         const imageCaption = block.image?.caption ? richTextToMarkdown(block.image.caption) : ''
         if (imageUrl) {
-          lines.push(`![${imageCaption}](${imageUrl})`)
+          lines.push(withBlockId(`![${imageCaption}](${imageUrl})`, blockId))
         }
         break
       case 'embed':
         // Handle embed blocks
         const embedUrl = block.embed?.url || ''
         if (embedUrl) {
-          lines.push(embedUrl)
+          lines.push(withBlockId(embedUrl, blockId))
         }
         break
       case 'video':
         // Handle video blocks (similar to embed)
         const videoUrl = block.video?.external?.url || block.video?.file?.url || ''
         if (videoUrl) {
-          lines.push(videoUrl)
+          lines.push(withBlockId(videoUrl, blockId))
         }
         break
       case 'bookmark':
@@ -336,7 +356,7 @@ export function blocksToMarkdown(blocks: (NotionBlock | BlockWithChildren)[], de
         const bookmarkUrl = block.bookmark?.url || ''
         const bookmarkCaption = block.bookmark?.caption ? richTextToMarkdown(block.bookmark.caption) : ''
         if (bookmarkUrl) {
-          lines.push(bookmarkCaption ? `[${bookmarkCaption}](${bookmarkUrl})` : bookmarkUrl)
+          lines.push(withBlockId(bookmarkCaption ? `[${bookmarkCaption}](${bookmarkUrl})` : bookmarkUrl, blockId))
         }
         break
       default:
