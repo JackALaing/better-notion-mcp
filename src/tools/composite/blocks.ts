@@ -239,14 +239,20 @@ export async function blocks(notion: Client, input: BlocksInput): Promise<any> {
         const successCount = results.filter((r) => r.deleted).length
         const failCount = results.filter((r) => !r.deleted).length
 
-        return {
+        const response: any = {
           action: 'delete',
           processed: results.length,
           success_count: successCount,
           fail_count: failCount,
-          cascade: input.cascade ?? false,
-          results
+          cascade: input.cascade ?? false
         }
+
+        // Only include results array when there are failures (reduces token bloat)
+        if (failCount > 0) {
+          response.results = results.filter((r) => !r.deleted)
+        }
+
+        return response
       }
 
       default:

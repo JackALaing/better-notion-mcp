@@ -66,8 +66,18 @@ Cascade delete (auto-delete all nested children):
 {"action": "delete", "block_id": "parent-id", "cascade": true}
 ```
 
-Delete response includes per-block results:
+Delete response (compact on success, detailed on failure):
 ```json
+// Full success - no results array
+{
+  "action": "delete",
+  "processed": 3,
+  "success_count": 3,
+  "fail_count": 0,
+  "cascade": false
+}
+
+// Partial failure - results shows only failed blocks
 {
   "action": "delete",
   "processed": 3,
@@ -75,8 +85,6 @@ Delete response includes per-block results:
   "fail_count": 1,
   "cascade": false,
   "results": [
-    {"block_id": "id1", "deleted": true},
-    {"block_id": "id2", "deleted": true},
     {"block_id": "id3", "deleted": false, "error": "Block not found"}
   ]
 }
