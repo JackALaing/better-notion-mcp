@@ -8,6 +8,20 @@ Block-level content: get, children, append, update, delete.
 - Use for **precise edits** within pages
 - For full page content, use pages tool instead
 
+## Getting Block IDs
+
+**For targeted edits** (delete/update specific content you can see):
+→ Use `pages get` with `include_block_ids: true` (recommended)
+
+**For structural operations** (find all headings, check which blocks have children):
+→ Use `blocks children` with `include_refs: true`
+
+Inline block IDs appear as HTML comments (invisible when rendered):
+```markdown
+## Heading <!-- block:abc123 -->
+Content here <!-- block:def456 -->
+```
+
 ## Actions
 
 ### get
@@ -21,7 +35,7 @@ Block-level content: get, children, append, update, delete.
 ```
 Returns markdown of child blocks.
 
-Add `include_refs: true` to get block IDs for subsequent update/delete:
+Add `include_refs: true` to get block IDs as a separate array:
 ```json
 {"action": "children", "block_id": "xxx", "include_refs": true}
 ```
