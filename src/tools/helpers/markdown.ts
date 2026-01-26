@@ -33,21 +33,53 @@ export interface RichText {
 export function markdownToBlocks(markdown: string): NotionBlock[] {
   const lines = markdown.split('\n')
   const blocks: NotionBlock[] = []
-  let currentList: NotionBlock[] = []
-  let currentListType: 'bulleted' | 'numbered' | null = null
+
+  // Stack for tracking nested list items
+  const listStack: Array<{ block: NotionBlock; indent: number }> = []
+
+  function flushListStack(): void {
+    while (listStack.length > 0) {
+      const item = listStack.pop()!
+      if (listStack.length > 0) {
+        addChildToListItem(listStack[listStack.length - 1].block, item.block)
+      } else {
+        blocks.push(item.block)
+      }
+    }
+  }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
 
-    // Flush list if we're not in a list anymore
-    if (currentListType && !isListItem(line)) {
-      blocks.push(...currentList)
-      currentList = []
-      currentListType = null
+    // Check if current line is a list item
+    const parsedList = parseListItem(line)
+
+    // Flush list stack when transitioning out of list context
+    if (!parsedList && listStack.length > 0) {
+      flushListStack()
     }
 
     // Skip empty lines
     if (!line.trim()) {
+      continue
+    }
+
+    // Handle list items with nesting support
+    if (parsedList) {
+      const newBlock = createListItemBlock(parsedList)
+
+      // Pop items at same or deeper indent - attach to parents
+      while (listStack.length > 0 &&
+             listStack[listStack.length - 1].indent >= parsedList.indent) {
+        const completed = listStack.pop()!
+        if (listStack.length > 0) {
+          addChildToListItem(listStack[listStack.length - 1].block, completed.block)
+        } else {
+          blocks.push(completed.block)
+        }
+      }
+
+      listStack.push({ block: newBlock, indent: parsedList.indent })
       continue
     }
 
@@ -129,18 +161,6 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
       
       blocks.push(createCalloutWithEmoji(contentLines.join('\n'), emoji))
     }
-    // Bulleted list
-    else if (line.match(/^[-*]\s/)) {
-      const text = line.slice(2)
-      currentListType = 'bulleted'
-      currentList.push(createBulletedListItem(text))
-    }
-    // Numbered list
-    else if (line.match(/^\d+\.\s/)) {
-      const text = line.replace(/^\d+\.\s/, '')
-      currentListType = 'numbered'
-      currentList.push(createNumberedListItem(text))
-    }
     // Quote
     else if (line.startsWith('> ')) {
       blocks.push(createQuote(line.slice(2)))
@@ -168,10 +188,8 @@ export function markdownToBlocks(markdown: string): NotionBlock[] {
     }
   }
 
-  // Flush remaining list
-  if (currentList.length > 0) {
-    blocks.push(...currentList)
-  }
+  // Flush remaining list items at end of input
+  flushListStack()
 
   return blocks
 }
@@ -521,6 +539,79 @@ function createNumberedListItem(text: string): NotionBlock {
   }
 }
 
+function createToDoItem(text: string, checked: boolean): NotionBlock {
+  return {
+    object: 'block',
+    type: 'to_do',
+    to_do: {
+      rich_text: parseRichText(text),
+      checked: checked,
+      color: 'default'
+    }
+  }
+}
+
+function getIndentLevel(line: string): number {
+  const match = line.match(/^(\s*)/)
+  const spaces = match ? match[1].length : 0
+  return Math.floor(spaces / 2)  // 2 spaces per level (matches blocksToMarkdown output)
+}
+
+function parseListItem(line: string): {
+  type: 'bulleted' | 'numbered' | 'todo';
+  text: string;
+  indent: number;
+  checked?: boolean;
+} | null {
+  const indent = getIndentLevel(line)
+  const trimmed = line.trimStart()
+
+  // To-do: - [ ] or - [x] (must check before bulleted)
+  const todoMatch = trimmed.match(/^-\s*\[([xX ])\]\s*(.*)$/)
+  if (todoMatch) {
+    return {
+      type: 'todo',
+      text: todoMatch[2],
+      indent,
+      checked: todoMatch[1].toLowerCase() === 'x'
+    }
+  }
+
+  // Bulleted: - or *
+  const bulletMatch = trimmed.match(/^[-*]\s+(.*)$/)
+  if (bulletMatch) {
+    return { type: 'bulleted', text: bulletMatch[1], indent }
+  }
+
+  // Numbered: 1. 2. etc
+  const numberedMatch = trimmed.match(/^\d+\.\s+(.*)$/)
+  if (numberedMatch) {
+    return { type: 'numbered', text: numberedMatch[1], indent }
+  }
+
+  return null
+}
+
+function createListItemBlock(parsed: NonNullable<ReturnType<typeof parseListItem>>): NotionBlock {
+  switch (parsed.type) {
+    case 'todo':
+      return createToDoItem(parsed.text, parsed.checked ?? false)
+    case 'bulleted':
+      return createBulletedListItem(parsed.text)
+    case 'numbered':
+      return createNumberedListItem(parsed.text)
+  }
+}
+
+function addChildToListItem(parent: NotionBlock, child: NotionBlock): void {
+  const typeKey = parent.type as 'bulleted_list_item' | 'numbered_list_item' | 'to_do'
+  const content = parent[typeKey]
+  if (!content.children) {
+    content.children = []
+  }
+  content.children.push(child)
+}
+
 function createCodeBlock(code: string, language: string): NotionBlock {
   return {
     object: 'block',
@@ -740,5 +831,9 @@ function createCalloutWithEmoji(text: string, emoji: string): NotionBlock {
 }
 
 function isListItem(line: string): boolean {
-  return line.match(/^[-*]\s/) !== null || line.match(/^\d+\.\s/) !== null
+  const trimmed = line.trimStart()
+  if (/^-\s*\[[xX ]\]\s/.test(trimmed)) return true  // to-do
+  if (/^[-*]\s/.test(trimmed)) return true            // bulleted
+  if (/^\d+\.\s/.test(trimmed)) return true           // numbered
+  return false
 }
