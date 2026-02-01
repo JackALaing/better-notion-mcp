@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "tsc -build && node scripts/build-cli.js",
+    "build:standalone-cli": "node scripts/build-standalone-cli.js",
     "dev": "tsx watch scripts/start-server.ts",
     "test": "vitest --passWithNoTests",
     "test:watch": "vitest watch",
